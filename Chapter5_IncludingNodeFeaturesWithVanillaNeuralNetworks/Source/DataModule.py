@@ -25,10 +25,10 @@ class CoraData(L.LightningDataModule):
         self.dataset = Planetoid(root='data', name='Cora')
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(dataset=self.dataset, batch_size=64, num_workers=11)
+        return DataLoader(dataset=self.dataset, batch_size=1, num_workers=11)
     
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(dataset=self.dataset, batch_size=64, num_workers=11)
+        return DataLoader(dataset=self.dataset, batch_size=1, num_workers=11)
     
     def test_dataloader(self) -> DataLoader:
         return DataLoader(dataset=self.dataset, batch_size=1, num_workers=11)

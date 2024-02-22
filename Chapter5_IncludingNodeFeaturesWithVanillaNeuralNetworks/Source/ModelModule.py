@@ -6,7 +6,6 @@ class SimpleMLP(L.LightningModule):
         super().__init__()
         self.mlp1 = Linear(dim_in, dim_hidden)
         self.mlp2 = Linear(dim_hidden, dim_out)
-
         self.loss_fn = torch.nn.CrossEntropyLoss()
 
     def forward(self, x):
@@ -38,21 +37,127 @@ class SimpleMLP(L.LightningModule):
     
     def training_step(self, batch, batch_idx):
         loss, accuracy = self._common_step(batch, mode='train')
-        self.log('train_loss', loss, prog_bar=True)
-        self.log('train_accuracy', accuracy, prog_bar=True)
+        self.log(name='train_loss', 
+                 value=loss, 
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+        
+        self.log(name='train_accuracy',
+                 value=accuracy,
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+        
         return loss
     
     def validation_step(self, batch, batch_idx):
         loss, accuracy = self._common_step(batch, mode='val')
-        self.log('val_loss', loss, prog_bar=True)
-        self.log('val_accuracy', accuracy, prog_bar=True)
-    
+        self.log(name='val_loss', 
+                 value=loss, 
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+        self.log(name='val_accuracy',
+                 value=accuracy,
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+
     def test_step(self, batch, batch_idx):
         loss, accuracy = self._common_step(batch, mode='test')
-        self.log('test_loss', loss, prog_bar=True)
-        self.log('test_accuracy', accuracy, prog_bar=True)
-
-
+        self.log(name='test_loss', 
+                 value=loss, 
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+        self.log(name='test_accuracy',
+                 value=accuracy,
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.01, weight_decay=2e-3)
     
+
+
+# ####################### GNN Model #######################
+class VanillaGNNLayer(torch.nn.Module):
+    def __init__(self, dim_in, dim_out):
+        super().__init__()
+        self.linear = Linear(dim_in, dim_out, bias=False)
+    
+    def forward(self, x, adjacency):
+        x = self.linear(x)
+        x = torch.sparse.mm(adjacency, x)
+        return x
+
+
+class SimpleGNN(L.LightningModule):
+    def __init__(self, dim_in, dim_hidden, dim_out):
+        super().__init__()
+
+        self.gnn1 = VanillaGNNLayer(dim_in, dim_hidden)
+        self.gnn2 = VanillaGNNLayer(dim_hidden, dim_out)
+        self.loss_fn = torch.nn.CrossEntropyLoss()
+    
+    def forward(self, x, adjacency):
+        x = self.gnn1(x, adjacency)
+        x = torch.relu(x)
+        x = self.gnn2(x, adjacency)
+        return torch.nn.functional.log_softmax(x, dim=1)
+    
+    def _common_step(self, data, mode='train'):
+        x = data.x
+        y = data.y
+        adjacency = to_dense_adj(data.edge_index)[0]
+        adjacency = adjacency + torch.eye(adjacency.shape[0], device=adjacency.device)
+        x = self.forward(x, adjacency)
+
+        if mode == 'train':
+            mask = data.train_mask
+        elif mode == 'val':
+            mask = data.val_mask
+        elif mode == 'test':
+            mask = data.test_mask
+        else:
+            assert False, "Unknown mode"
+
+        loss = self.loss_fn(x[mask], y[mask])
+
+        accuracy = (x[mask].argmax(dim=-1) == y[mask]).sum().float() / mask.sum()
+
+        return loss, accuracy
+    
+    def training_step(self, batch, batch_idx):
+        loss, accuracy = self._common_step(batch, mode='train')
+        self.log(name='train_loss', 
+                 value=loss, 
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+        
+        self.log(name='train_accuracy',
+                 value=accuracy,
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+        
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        loss, accuracy = self._common_step(batch, mode='val')
+        self.log(name='val_loss', 
+                 value=loss, 
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+        self.log(name='val_accuracy',
+                 value=accuracy,
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+
+    def test_step(self, batch, batch_idx):
+        loss, accuracy = self._common_step(batch, mode='test')
+        self.log(name='test_loss', 
+                 value=loss, 
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+        self.log(name='test_accuracy',
+                 value=accuracy,
+                 batch_size=batch.batch.shape[0],
+                 prog_bar=True)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=0.01, weight_decay=2e-3)

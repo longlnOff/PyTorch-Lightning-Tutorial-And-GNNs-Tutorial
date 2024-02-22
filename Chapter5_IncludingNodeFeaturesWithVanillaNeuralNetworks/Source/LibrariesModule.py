@@ -11,3 +11,4 @@ import lightning as L
 from torch_geometric.loader import DataLoader
 import numpy as np
 from torch_geometric.data import Data
+from torch_geometric.utils import to_dense_adj

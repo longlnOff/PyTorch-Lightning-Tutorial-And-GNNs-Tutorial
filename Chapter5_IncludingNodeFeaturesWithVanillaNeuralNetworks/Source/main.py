@@ -19,7 +19,7 @@ if __name__ == '__main__':
     dim_in = data_module.dataset.num_features
     dim_out = data_module.dataset.num_classes
     dim_hidden = 16
-    model = SimpleMLP(dim_in=dim_in, 
+    model = SimpleGNN(dim_in=dim_in, 
                       dim_hidden=dim_hidden, 
                       dim_out=dim_out)
     
