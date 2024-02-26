@@ -1,0 +1,30 @@
+model:
+  dim_in: 1433
+  dim_hidden: 16
+  dim_out: 7
+
+trainer:
+  accelerator: auto
+  max_epochs: 100
+  enable_progress_bar: True
+  log_every_n_steps: 1
+  default_root_dir: ./Checkpoint
+  logger: 
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
+    dict_kwargs:
+      save_dir: ./logs
+      name: gnn_logs
+  callbacks:
+    class_path: lightning.pytorch.callbacks.ModelCheckpoint
+    init_args:
+      monitor: val_accuracy
+      save_top_k: 4
+      mode: max
+      dirpath: ./Checkpoint
+      filename: model-GNN-{epoch:02d}
+
+data:
+  class_path: DataModule.CoraData
+  init_args:
+    data_root: ./DataFolder
+    num_workers: 8
