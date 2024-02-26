@@ -1,11 +1,7 @@
 if __name__ == '__main__':
     from DataModule import *
     from LibrariesModule import *
-    from ModelModule import (
-        SimpleMLP,
-        SimpleGNN,
-        SimpleGCN
-    )
+    from ModelModule import *
     from lightning.pytorch.cli import LightningCLI
 
     # To properly utilize Tensor Cores
