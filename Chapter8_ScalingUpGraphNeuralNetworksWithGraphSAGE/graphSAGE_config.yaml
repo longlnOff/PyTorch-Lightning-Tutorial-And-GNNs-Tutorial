@@ -1,0 +1,34 @@
+model:
+  dim_in: 500
+  dim_hidden: 64
+  dim_out: 3
+  aggr: mean
+
+trainer:
+  deterministic: True
+  accelerator: auto
+  max_epochs: 100
+  enable_progress_bar: True
+  log_every_n_steps: 1
+  default_root_dir: ./Checkpoint
+  logger: 
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
+    dict_kwargs:
+      save_dir: ./logs
+      name: graphSAGE_logs
+  callbacks:
+    class_path: lightning.pytorch.callbacks.ModelCheckpoint
+    init_args:
+      monitor: val_accuracy
+      save_top_k: 4
+      mode: max
+      dirpath: ./Checkpoint
+      filename: model-graphSAGE-{epoch:02d}
+
+data:
+  class_path: DataModule.PubMed
+  init_args:
+    data_root: ./DataFolder
+    batch_size: 8
+    num_workers: 8
+    num_neighbors: [10, 10]
